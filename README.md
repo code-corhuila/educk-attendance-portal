@@ -1,25 +1,19 @@
 # educk-attendance-portal
 
-> attendance bounded context: web UI (remote)
+Attendance domain web remote for EduTrack. HU-005 provides a teacher-facing daily roll call with an ISO date, official attendance statuses, live summary cards and an API-shaped session payload.
 
-Part of the **LMS Library** distributed system — team `lms-library`, Grupo 2.
-Governance and documentation live in [`library-docs`](https://github.com/code-corhuila/library-docs).
+## Local development
+
+Requires Node 22 LTS or 24.
+
+```bash
+npm ci
+npm test
+npm run dev
+```
+
+The portal runs on `http://localhost:3003`. This slice uses simulated roster data and does not send HTTP requests. The future `POST /sessions` integration must use the shared HTTP client from `educk-front`.
 
 ## Branching
 
-Three permanent branches. **None of them accepts a direct commit** — you enter through a child
-branch and leave through a Pull Request.
-
-```
-develop  <--PR--  feat/... fix/... chore/...
-qa       <--PR--  qa/...
-main     <--PR--  release/...  hotfix/...
-```
-
-Promotion happens **by re-application** (`git cherry-pick -x`), never by merging one permanent
-branch into another: `merge develop -> qa` and `merge qa -> main` do not exist in this model.
-
-`main` requires **1 approval from `ariel5253`**. On `develop` and `qa` the team sets its own review
-rule.
-
-Full policy: `00-governance/branching-policy.md` in `library-docs`.
+Changes enter `develop` through `feat/`, `fix/` or `chore/` Pull Requests. Promotion to `qa` and `main` uses the documented re-application flow; permanent branches are never merged directly.
