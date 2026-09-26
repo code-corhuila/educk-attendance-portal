@@ -47,7 +47,7 @@ jobs:
           fetch-depth: 0
 
       - name: Add Python to PATH
-        shell: pwsh
+        shell: powershell
         run: |
           $pyRoot = Join-Path $env:LOCALAPPDATA "Programs\Python\Python312"
           if (-not (Test-Path (Join-Path $pyRoot "python.exe"))) {
