@@ -1,50 +1,88 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import {
+  ATTENDANCE_STATUSES,
+  buildAttendanceSessionPayload,
+  calculateAttendanceSummary,
+  getAttendanceViewState,
+  getTodayISODate,
+  updateStudentStatus
+} from './attendanceSession.js';
+import './styles.css';
 
-export default function App() {
-  const [students, setStudents] = useState([
-    { id: 's-1', name: 'Carlos Pérez', status: 'PRESENT' },
-    { id: 's-2', name: 'Ana Gómez', status: 'ABSENT' },
-    { id: 's-3', name: 'Luis Ramos', status: 'PRESENT' }
-  ]);
+const INITIAL_STUDENTS = [
+  { studentId: 's-1', name: 'Carlos Pérez', status: 'PRESENT' },
+  { studentId: 's-2', name: 'Ana Gómez', status: 'ABSENT' },
+  { studentId: 's-3', name: 'Luis Ramos', status: 'LATE' },
+  { studentId: 's-4', name: 'Sofía Torres', status: 'EXCUSED', reason: 'Cita médica' }
+];
 
-  const updateStatus = (id, newStatus) => {
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
+const LABELS = { PRESENT: 'Presente', ABSENT: 'Ausente', LATE: 'Tarde', EXCUSED: 'Excusa' };
+
+function StatusPicker({ student, onChange }) {
+  return (
+    <fieldset className="status-picker">
+      <legend>Estado de {student.name}</legend>
+      {ATTENDANCE_STATUSES.map((status) => (
+        <button key={status} type="button" className={`status status-${status.toLowerCase()}`}
+          aria-pressed={student.status === status} onClick={() => onChange(student.studentId, status)}>
+          {LABELS[status]}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = false, error = null }) {
+  const [sessionDate, setSessionDate] = useState(getTodayISODate());
+  const [students, setStudents] = useState(initialStudents);
+  const [notice, setNotice] = useState('');
+  const summary = useMemo(() => calculateAttendanceSummary(students), [students]);
+  const viewState = getAttendanceViewState({ isLoading, error, students });
+  const stateMessage = { loading: 'Cargando estudiantes…', error: 'No fue posible cargar la lista. Intenta de nuevo.', empty: 'No hay estudiantes para esta sesión.' }[viewState];
+
+  const changeStatus = (studentId, status) => {
+    setStudents((current) => updateStudentStatus(current, studentId, status));
+    setNotice('');
+  };
+
+  const saveAttendance = () => {
+    const payload = buildAttendanceSessionPayload({
+      subjectId: '00000000-0000-4000-8000-000000000101', sessionDate, period: 'Period 1', students
+    });
+    setNotice(`Asistencia del ${payload.sessionDate} preparada: ${payload.records.length} registros. Sin envío al API.`);
   };
 
   return (
-    <div style={{ fontFamily: 'sans-serif', maxWidth: 650, margin: '40px auto', padding: 24, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-      <h2 style={{ color: '#b45309' }}>EduTrack — Pase de Lista Rápido</h2>
-      <p style={{ color: '#666', fontSize: 13 }}>Portal Asistencia y Orden Causal (HU-005) | Puerto 3003</p>
+    <main className="attendance-page">
+      <header className="page-header">
+        <div><p className="eyebrow">Portal docente</p><h1>Registro de asistencia</h1><p>Matemáticas · Periodo 1</p></div>
+        <label className="date-field">Fecha de clase
+          <input type="date" required value={sessionDate} onChange={(event) => setSessionDate(event.target.value)} />
+        </label>
+      </header>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
-        {students.map(s => (
-          <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12, border: '1px solid #e5e7eb', borderRadius: 6 }}>
-            <span style={{ fontWeight: 'bold' }}>{s.name}</span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {['PRESENT', 'ABSENT', 'LATE'].map(st => (
-                <button
-                  key={st}
-                  onClick={() => updateStatus(s.id, st)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 4,
-                    border: 'none',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    background: s.status === st ? (st === 'PRESENT' ? '#10b981' : st === 'ABSENT' ? '#ef4444' : '#f59e0b') : '#e5e7eb',
-                    color: s.status === st ? '#fff' : '#374151'
-                  }}
-                >
-                  {st === 'PRESENT' ? 'Presente' : st === 'ABSENT' ? 'Ausente' : 'Tarde'}
-                </button>
-              ))}
-            </div>
-          </div>
+      <section className="kpi-grid" aria-label="Resumen de asistencia">
+        {ATTENDANCE_STATUSES.map((status) => (
+          <article className="kpi-card" key={status}><strong>{summary[status]}</strong><span>{LABELS[status]}</span></article>
         ))}
-      </div>
-      <button style={{ marginTop: 20, width: '100%', padding: 12, background: '#b45309', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer' }}>
-        Guardar Asistencia Diaria
-      </button>
-    </div>
+        <article className="kpi-card total"><strong>{summary.total}</strong><span>Total</span></article>
+      </section>
+
+      <section className="roster" aria-labelledby="roster-title">
+        <div className="section-heading"><div><h2 id="roster-title">Lista del curso</h2><p>{summary.total} estudiantes</p></div>
+          <button className="primary" type="button" onClick={saveAttendance} disabled={viewState !== 'data' || !sessionDate}>Guardar asistencia</button>
+        </div>
+        {viewState !== 'data' ? <p className="empty" role={viewState === 'error' ? 'alert' : undefined}>{stateMessage}</p> : (
+          <div className="student-list">{students.map((student) => (
+            <article className="student-row" key={student.studentId}>
+              <div className="student"><span className="avatar" aria-hidden="true">{student.name.split(' ').map((part) => part[0]).join('').slice(0, 2)}</span>
+                <div><h3>{student.name}</h3><p>{student.studentId}</p></div></div>
+              <StatusPicker student={student} onChange={changeStatus} />
+            </article>
+          ))}</div>
+        )}
+        <p className="notice" role="status" aria-live="polite">{notice}</p>
+      </section>
+    </main>
   );
 }
