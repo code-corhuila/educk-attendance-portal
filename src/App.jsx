@@ -7,6 +7,7 @@ import {
   getTodayISODate,
   updateStudentStatus
 } from './attendanceSession.js';
+import { apiFetch } from 'shell/apiClient';
 import './styles.css';
 
 const INITIAL_STUDENTS = [
@@ -36,6 +37,7 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
   const [sessionDate, setSessionDate] = useState(getTodayISODate());
   const [students, setStudents] = useState(initialStudents);
   const [notice, setNotice] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const summary = useMemo(() => calculateAttendanceSummary(students), [students]);
   const viewState = getAttendanceViewState({ isLoading, error, students });
   const stateMessage = { loading: 'Cargando estudiantes…', error: 'No fue posible cargar la lista. Intenta de nuevo.', empty: 'No hay estudiantes para esta sesión.' }[viewState];
@@ -45,11 +47,28 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
     setNotice('');
   };
 
-  const saveAttendance = () => {
-    const payload = buildAttendanceSessionPayload({
-      subjectId: '00000000-0000-4000-8000-000000000101', sessionDate, period: 'Period 1', students
-    });
-    setNotice(`Asistencia del ${payload.sessionDate} preparada: ${payload.records.length} registros. Sin envío al API.`);
+  const saveAttendance = async () => {
+    setIsSubmitting(true);
+    setNotice('Guardando asistencia...');
+    try {
+      const payload = buildAttendanceSessionPayload({
+        subjectId: '00000000-0000-4000-8000-000000000101', sessionDate, period: 'Period 1', students
+      });
+      const response = await apiFetch('/api/v1/attendance/sessions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Correlation-Id': crypto.randomUUID()
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error('Error del servidor');
+      setNotice(`Asistencia del ${payload.sessionDate} guardada: ${payload.records.length} registros.`);
+    } catch (e) {
+      setNotice('Error de conexión al enviar la asistencia al API.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -70,7 +89,7 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
 
       <section className="roster" aria-labelledby="roster-title">
         <div className="section-heading"><div><h2 id="roster-title">Lista del curso</h2><p>{summary.total} estudiantes</p></div>
-          <button className="primary" type="button" onClick={saveAttendance} disabled={viewState !== 'data' || !sessionDate}>Guardar asistencia</button>
+          <button className="primary" type="button" onClick={saveAttendance} disabled={viewState !== 'data' || !sessionDate || isSubmitting}>Guardar asistencia</button>
         </div>
         {viewState !== 'data' ? <p className="empty" role={viewState === 'error' ? 'alert' : undefined}>{stateMessage}</p> : (
           <div className="student-list">{students.map((student) => (
