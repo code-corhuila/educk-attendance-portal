@@ -33,7 +33,7 @@ function StatusPicker({ student, onChange }) {
   );
 }
 
-export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = false, error = null }) {
+export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = false, error = null, subjectId = '00000000-0000-4000-8000-000000000101', period = 'Period 1' }) {
   const [sessionDate, setSessionDate] = useState(getTodayISODate());
   const [students, setStudents] = useState(initialStudents);
   const [notice, setNotice] = useState('');
@@ -52,13 +52,12 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
     setNotice('Guardando asistencia...');
     try {
       const payload = buildAttendanceSessionPayload({
-        subjectId: '00000000-0000-4000-8000-000000000101', sessionDate, period: 'Period 1', students
+        subjectId, sessionDate, period, students
       });
       const response = await apiFetch('/api/v1/attendance/sessions', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'X-Correlation-Id': crypto.randomUUID()
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
