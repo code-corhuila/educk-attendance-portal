@@ -19,6 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: code-corhuila/educk-front
+          token: ${{ secrets.GH_FRONT_READ_TOKEN }}
           ref: 00d87370f0ec9bccb851131aee1a388adc19d2bd
           path: educk-front
           persist-credentials: false
