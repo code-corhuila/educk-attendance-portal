@@ -9,6 +9,7 @@ import {
 } from './attendanceSession.js';
 import { apiFetch } from 'shell/apiClient';
 import './styles.css';
+import './feedback.css';
 
 const INITIAL_STUDENTS = [
   { studentId: 's-1', name: 'Carlos Pérez', status: 'PRESENT' },
@@ -36,7 +37,7 @@ function StatusPicker({ student, onChange }) {
 export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = false, error = null, subjectId = '00000000-0000-4000-8000-000000000101', period = 'Period 1' }) {
   const [sessionDate, setSessionDate] = useState(getTodayISODate());
   const [students, setStudents] = useState(initialStudents);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const summary = useMemo(() => calculateAttendanceSummary(students), [students]);
   const viewState = getAttendanceViewState({ isLoading, error, students });
@@ -44,12 +45,12 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
 
   const changeStatus = (studentId, status) => {
     setStudents((current) => updateStudentStatus(current, studentId, status));
-    setNotice('');
+    setNotice(null);
   };
 
   const saveAttendance = async () => {
     setIsSubmitting(true);
-    setNotice('Guardando asistencia...');
+    setNotice({ type: 'info', message: 'Guardando asistencia...' });
     try {
       const payload = buildAttendanceSessionPayload({
         subjectId, sessionDate, period, students
@@ -62,9 +63,9 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
         body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error('Error del servidor');
-      setNotice(`Asistencia del ${payload.sessionDate} guardada: ${payload.records.length} registros.`);
+      setNotice({ type: 'success', message: `Asistencia del ${payload.sessionDate} guardada: ${payload.records.length} registros.` });
     } catch (e) {
-      setNotice('Error de conexión al enviar la asistencia al API.');
+      setNotice({ type: 'error', message: 'Error de conexión al enviar la asistencia al API.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -99,7 +100,7 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
             </article>
           ))}</div>
         )}
-        <p className="notice" role="status" aria-live="polite">{notice}</p>
+        <p className="notice" data-type={notice?.type} role="status" aria-live="polite">{notice?.message}</p>
       </section>
     </main>
   );

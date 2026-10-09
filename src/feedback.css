@@ -1,0 +1,9 @@
+/* Official semantic tokens; fallbacks support independent integration of the token PR. */
+.notice[data-type="info"] { --notice-color: var(--color-info, #3b82f6); }
+.notice[data-type="success"] { --notice-color: var(--color-success, #10b981); }
+.notice[data-type="error"] { --notice-color: var(--color-error, #ef4444); }
+.notice[data-type]:not(:empty) {
+  background: color-mix(in srgb, var(--notice-color) 8%, white);
+  color: color-mix(in srgb, var(--notice-color) 50%, black);
+  border: 1px solid color-mix(in srgb, var(--notice-color) 35%, white);
+}
