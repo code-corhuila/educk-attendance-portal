@@ -7,7 +7,7 @@ import {
   getTodayISODate,
   updateStudentStatus
 } from './attendanceSession.js';
-import { apiFetch } from 'shell/apiClient';
+import { apiFetch } from 'educk-front';
 import './styles.css';
 import './feedback.css';
 

@@ -8,8 +8,21 @@ on:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: educk-attendance-portal
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: educk-attendance-portal
+      - name: Check out the shared HTTP client
+        uses: actions/checkout@v4
+        with:
+          repository: code-corhuila/educk-front
+          token: ${{ secrets.GH_FRONT_READ_TOKEN }}
+          ref: 00d87370f0ec9bccb851131aee1a388adc19d2bd
+          path: educk-front
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
