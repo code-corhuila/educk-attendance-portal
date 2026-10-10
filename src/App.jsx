@@ -52,18 +52,38 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
     setIsSubmitting(true);
     setNotice({ type: 'info', message: 'Guardando asistencia...' });
     try {
-      const payload = buildAttendanceSessionPayload({
-        subjectId, sessionDate, period, students
+      const teacherId = '00000000-0000-4000-8000-000000000999'; // Mock teacher ID
+      const schoolId = '00000000-0000-4000-8000-000000000001'; // Mock school ID
+      let sequenceNum = 1;
+      
+      const promises = students.map(student => {
+        // studentId might be a mock like 's-1', but the backend expects UUID. 
+        // We will generate a UUID or use a hardcoded one for mock students to avoid 400 errors.
+        const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+        const studentUuid = uuidRegex.test(student.studentId) ? student.studentId : `00000000-0000-4000-8000-00000000020${student.studentId.replace('s-', '')}`;
+        
+        return apiFetch('/api/v1/attendance', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            studentId: studentUuid,
+            schoolId,
+            date: sessionDate,
+            status: student.status,
+            teacherId,
+            sequenceNum: sequenceNum++
+          })
+        }).then(res => {
+          if (!res.ok) throw new Error('Error del servidor');
+          return res;
+        });
       });
-      const response = await apiFetch('/api/v1/attendance/sessions', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) throw new Error('Error del servidor');
-      setNotice({ type: 'success', message: `Asistencia del ${payload.sessionDate} guardada: ${payload.records.length} registros.` });
+
+      await Promise.all(promises);
+      
+      setNotice({ type: 'success', message: `Asistencia del ${sessionDate} guardada: ${students.length} registros.` });
     } catch (e) {
       setNotice({ type: 'error', message: 'Error de conexión al enviar la asistencia al API.' });
     } finally {
