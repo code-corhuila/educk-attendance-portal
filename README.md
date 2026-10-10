@@ -12,8 +12,8 @@ npm test
 npm run dev
 ```
 
-The portal runs on `http://localhost:3003`. This slice uses simulated roster data and does not send HTTP requests. The future `POST /sessions` integration must use the shared HTTP client from `educk-front`.
+The portal runs on `http://localhost:3003`. It uses the shared HTTP client from `educk-front` to interact with the backend at `POST /api/v1/attendance`.
 
 ## Branching
 
-Changes enter `develop` through `feat/`, `fix/` or `chore/` Pull Requests. Promotion to `qa` and `main` uses the documented re-application flow; permanent branches are never merged directly.
+Changes enter `develop` through `feat/`, `fix/` or `chore/` Pull Requests. Promotion to `qa` and `main` uses the documented re-application flow; permanent branches are never merged directly. Pull requests targeting `main` require approval from the repository code owner (@ariel5253). For full governance rules, see the shared `educk-docs` repository.

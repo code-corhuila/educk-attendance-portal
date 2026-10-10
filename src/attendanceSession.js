@@ -23,9 +23,9 @@ export function getAttendanceViewState({ isLoading = false, error = null, studen
 }
 
 /**
- * Creates the POST /sessions body documented by attendance-service.yaml.
- * The API accepts subjectId, sessionDate, period and records; student names are mock-only
- * presentation data and are excluded. HTTP transport is outside this HU-005 slice.
+ * Creates the POST /api/v1/attendance body for the real backend API.
+ * The API accepts subjectId, sessionDate, period and records; student names are
+ * presentation data and are excluded.
  */
 export function buildAttendanceSessionPayload({ subjectId, sessionDate, period, students }) {
   return {
