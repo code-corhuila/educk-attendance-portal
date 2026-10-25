@@ -31,7 +31,7 @@ h1 { font-size: clamp(1.5rem, 3vw, 1.95rem); color: #ffffff; font-weight: 800; l
 .excuse-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 18px 22px; margin-bottom: 20px; display: grid; gap: 12px; }
 .excuse-box h2 { font-size: 1rem; color: #1e3a8a; font-weight: 800; }
 .excuse-box p { font-size: 0.82rem; color: #334155; margin-top: 2px; }
-.excuse-form { display: grid; grid-template-columns: 220px 1fr auto; gap: 10px; align-items: center; }
+.excuse-form { display: grid; grid-template-columns: 150px 220px 1fr auto; gap: 10px; align-items: center; }
 .excuse-form select, .excuse-form input { padding: 10px 12px; border: 1px solid #93c5fd; border-radius: 8px; background: #ffffff; font-size: 0.85rem; color: #0f172a; }
 .roster { padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
 .primary { min-height: 40px; padding: 9px 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; font-weight: 700; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: all 0.15s ease; }
