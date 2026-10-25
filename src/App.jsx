@@ -50,8 +50,12 @@ function StatusPicker({ student, onChange }) {
 export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = false, error = null, subjectId = '00000000-0000-4000-8000-000000000101', period = 'Period 1' }) {
   const [sessionDate, setSessionDate] = useState(getTodayISODate());
   const [students, setStudents] = useState(initialStudents);
-  const [childHistory, setChildHistory] = useState(INITIAL_CHILD_HISTORY);
-  const [directorExcuses, setDirectorExcuses] = useState(INITIAL_DIRECTOR_EXCUSES);
+  const [childHistory, setChildHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('edutrack_child_history_v1') || 'null') || INITIAL_CHILD_HISTORY; } catch { return INITIAL_CHILD_HISTORY; }
+  });
+  const [directorExcuses, setDirectorExcuses] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('edutrack_director_excuses_v1') || 'null') || INITIAL_DIRECTOR_EXCUSES; } catch { return INITIAL_DIRECTOR_EXCUSES; }
+  });
   const [excuseDate, setExcuseDate] = useState('2026-10-24');
   const [excuseType, setExcuseType] = useState('Incapacidad Médica EPS');
   const [excuseText, setExcuseText] = useState('');
@@ -95,7 +99,11 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
       e.preventDefault();
       if (!excuseText.trim()) return;
       const newEntry = { id: `h-${Date.now()}`, date: excuseDate, subject: 'Física y Laboratorio', teacher: 'Prof. Laura Morales', status: 'EXCUSED', detail: `${excuseType}: ${excuseText.trim()}`, state: 'Radicada · En revisión de Coordinación' };
-      setChildHistory((curr) => [newEntry, ...curr.filter((x) => x.date !== excuseDate)]);
+      const nextHistory = [newEntry, ...childHistory.filter((x) => x.date !== excuseDate)];
+      setChildHistory(nextHistory);
+      const nextDir = [{ id: newEntry.id, student: 'Juan Sebastián López', course: '10°A', guardian: 'María López', date: excuseDate, doc: `${excuseType} — ${excuseText.trim()}`, approved: false }, ...directorExcuses];
+      setDirectorExcuses(nextDir);
+      try { localStorage.setItem('edutrack_child_history_v1', JSON.stringify(nextHistory)); localStorage.setItem('edutrack_director_excuses_v1', JSON.stringify(nextDir)); } catch { /* ignore */ }
       setExcuseText('');
       setNotice({ type: 'success', message: 'Excusa médica radicada exitosamente para Juan Sebastián López. Enviada a Coordinación.' });
     };
@@ -160,7 +168,13 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
               <div className="reason-line">
                 <span className={`excuse-badge ${ex.approved ? 'approved' : 'pending'}`}>{ex.approved ? 'Avalada Oficialmente' : 'Pendiente de Aval'}</span>
                 {!ex.approved && (
-                  <button type="button" className="approve-btn" onClick={() => { setDirectorExcuses((list) => list.map((i) => i.id === ex.id ? { ...i, approved: true } : i)); setNotice({ type: 'success', message: `Excusa de ${ex.student} avalada y notificada a los docentes.` }); }}>
+                  <button type="button" className="approve-btn" onClick={() => {
+                    const nextDir = directorExcuses.map((i) => i.id === ex.id ? { ...i, approved: true } : i);
+                    const nextHist = childHistory.map((h) => (h.id === ex.id || h.date === ex.date) ? { ...h, status: 'EXCUSED', state: 'Excusa Avalada por Coordinación' } : h);
+                    setDirectorExcuses(nextDir); setChildHistory(nextHist);
+                    try { localStorage.setItem('edutrack_director_excuses_v1', JSON.stringify(nextDir)); localStorage.setItem('edutrack_child_history_v1', JSON.stringify(nextHist)); } catch { /* ignore */ }
+                    setNotice({ type: 'success', message: `Excusa de ${ex.student} avalada y actualizada en el portal del acudiente.` });
+                  }}>
                     Avalar Excusa Médica
                   </button>
                 )}
