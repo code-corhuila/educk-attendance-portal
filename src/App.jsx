@@ -42,7 +42,10 @@ function StatusPicker({ student, onChange, disabled }) {
 
 export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = false, error = null, subjectId = '00000000-0000-4000-8000-000000000101', period = 'Period 1' }) {
   const [sessionDate, setSessionDate] = useState(getTodayISODate());
-  const [activeRole, setActiveRole] = useState('DOCENTE');
+  const [activeRole, setActiveRole] = useState(() => {
+    const urlRole = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('role')?.toUpperCase() : '';
+    return ['DOCENTE', 'ACUDIENTE', 'DIRECTIVO'].includes(urlRole) ? urlRole : 'DOCENTE';
+  });
   const [students, setStudents] = useState(initialStudents);
   const [excuseStudentId, setExcuseStudentId] = useState('s-2');
   const [excuseText, setExcuseText] = useState('');
