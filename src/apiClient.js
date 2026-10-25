@@ -10,6 +10,7 @@ const DEFAULT_API_BASE =
 const API_BASE =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ||
   DEFAULT_API_BASE;
+
 function randomHex(byteLength) {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     const bytes = new Uint8Array(byteLength);
@@ -18,6 +19,7 @@ function randomHex(byteLength) {
   }
   return Array.from({ length: byteLength * 2 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
 }
+
 export function getSession() {
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(SESSION_KEY) : null;
@@ -28,6 +30,7 @@ export function getSession() {
     return null;
   }
 }
+
 export async function apiFetch(url, options = {}) {
   const headers = new Headers(options.headers || {});
   const session = getSession();
@@ -43,22 +46,9 @@ export async function apiFetch(url, options = {}) {
   if (!headers.has('Idempotency-Key')) headers.set('Idempotency-Key', idempotencyKey);
   const resolvedUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3500);
+  const timer = setTimeout(() => controller.abort(), 5000);
   try {
     return await fetch(resolvedUrl, { ...options, headers, signal: controller.signal });
-  } catch {
-    // Resilient local buffer fallback when educk-attendance-api (:8083) container is offline
-    if (typeof localStorage !== 'undefined' && options.body) {
-      try {
-        const queue = JSON.parse(localStorage.getItem('edutrack_attendance_buffer') || '[]');
-        queue.push({ url: resolvedUrl, body: JSON.parse(options.body), traceId, timestamp: new Date().toISOString() });
-        localStorage.setItem('edutrack_attendance_buffer', JSON.stringify(queue.slice(-50)));
-      } catch { /* ignore storage quota errors */ }
-    }
-    return new Response(JSON.stringify({ status: 'BUFFERED_LOCALLY', traceId }), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' }
-    });
   } finally {
     clearTimeout(timer);
   }
