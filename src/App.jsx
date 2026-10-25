@@ -137,15 +137,7 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
           <p>{roleInfo.subtitle}</p>
         </div>
         <div className="header-controls">
-          <div className="role-switcher" role="tablist" aria-label="Cambiar rol en Asistencia">
-            {['DOCENTE', 'ACUDIENTE', 'DIRECTIVO'].map((role) => (
-              <button key={role} type="button" role="tab" aria-selected={activeRole === role}
-                className={`role-btn ${activeRole === role ? 'active' : ''}`} onClick={() => setActiveRole(role)}>
-                {role === 'DOCENTE' ? 'Vista Docente' : role === 'ACUDIENTE' ? 'Vista Acudiente' : 'Vista Director'}
-              </button>
-            ))}
-          </div>
-          <label className="date-field">Fecha de clase
+          <label className="date-field">Fecha de registro
             <input type="date" required value={sessionDate} onChange={(event) => setSessionDate(event.target.value)} />
           </label>
         </div>
