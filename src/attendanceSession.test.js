@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { extractShellContext, getSession, setPortalAccessToken } from './apiClient.js';
 import {
   buildAttendanceSessionPayload,
   calculateAttendanceSummary,
@@ -45,4 +46,16 @@ test('builds the documented session payload without presentation fields', () => 
   const payload = buildAttendanceSessionPayload({ subjectId: 'subject', sessionDate: '2026-09-25', period: 'Period 1', students });
   assert.deepEqual(payload.records[2], { studentId: '3', status: 'EXCUSED', reason: 'Medical' });
   assert.equal('name' in payload.records[0], false);
+});
+
+test('extractShellContext validates shell origin and keeps token only in memory', () => {
+  setPortalAccessToken('');
+  assert.equal(getSession(), null);
+  assert.equal(extractShellContext({ origin: 'https://evil.example', data: { type: 'edutrack:context', token: 'jwt', role: 'DIRECTIVO' } }, 'http://localhost:3000'), null);
+  assert.equal(extractShellContext({ origin: 'http://localhost:3000', data: { type: 'edutrack:context', token: 'jwt', role: 'STUDENT' } }, 'http://localhost:3000'), null);
+  assert.equal(getSession(), null);
+
+  const ctx = extractShellContext({ origin: 'http://localhost:3000', data: { type: 'edutrack:context', token: 'rs256-jwt', role: 'DOCENTE', user: { name: 'Carlos' } } }, 'http://localhost:3000');
+  assert.equal(ctx?.role, 'DOCENTE');
+  assert.deepEqual(getSession(), { token: 'rs256-jwt' });
 });

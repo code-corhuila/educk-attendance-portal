@@ -1,6 +1,8 @@
 // Shared API client adapter for educk-attendance-portal (:3003 -> :8083)
-// Propagates W3C traceparent, X-Correlation-Id, Idempotency-Key, and JWT session token
-const SESSION_KEY = 'edutrack_session';
+// Propagates W3C traceparent, X-Correlation-Id, Idempotency-Key, and in-memory JWT token
+const ALLOWED_ROLES = new Set(['ACUDIENTE', 'DOCENTE', 'DIRECTIVO']);
+export const SHELL_ORIGIN = new URL((typeof import.meta !== 'undefined' && import.meta.env?.VITE_SHELL_ORIGIN) || 'http://localhost:3000').origin;
+let portalAccessToken = '';
 const DEFAULT_API_BASE =
   typeof window !== 'undefined' &&
   window.location.hostname !== 'localhost' &&
@@ -10,6 +12,38 @@ const DEFAULT_API_BASE =
 const API_BASE =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ||
   DEFAULT_API_BASE;
+
+export function setPortalAccessToken(token) {
+  portalAccessToken = typeof token === 'string' ? token : '';
+}
+
+export function isTrustedShellOrigin(candidate, trustedUrl = SHELL_ORIGIN) {
+  try {
+    if ('Origin' in globalThis && typeof globalThis.Origin?.from === 'function') {
+      let candidateOrigin;
+      try { candidateOrigin = globalThis.Origin.from(candidate); } catch {
+        const raw = typeof MessageEvent !== 'undefined' && candidate instanceof MessageEvent ? candidate.origin : String(candidate ?? '');
+        candidateOrigin = globalThis.Origin.from(raw);
+      }
+      return candidateOrigin.isSameOrigin(globalThis.Origin.from(trustedUrl));
+    }
+    const rawUrl = typeof candidate === 'string' ? candidate : (typeof candidate?.origin === 'string' ? candidate.origin : '');
+    const candidateParsed = new URL(rawUrl), trustedParsed = new URL(trustedUrl);
+    return candidateParsed.origin !== 'null' && candidateParsed.origin === trustedParsed.origin;
+  } catch {
+    return false;
+  }
+}
+
+export function extractShellContext(event, trustedUrl = SHELL_ORIGIN) {
+  if (!isTrustedShellOrigin(event, trustedUrl)) return null;
+  const data = event?.data;
+  if (!data || data.type !== 'edutrack:context' || typeof data.token !== 'string' || !data.token) return null;
+  const role = typeof data.role === 'string' ? data.role.trim().toUpperCase() : '';
+  if (!ALLOWED_ROLES.has(role)) return null;
+  setPortalAccessToken(data.token);
+  return { token: data.token, role, user: data.user || null, view: data.view || '' };
+}
 
 function randomHex(byteLength) {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
@@ -21,14 +55,7 @@ function randomHex(byteLength) {
 }
 
 export function getSession() {
-  try {
-    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(SESSION_KEY) : null;
-    if (raw) return JSON.parse(raw);
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('edutrack_token') : null;
-    return token ? { token } : null;
-  } catch {
-    return null;
-  }
+  return portalAccessToken ? { token: portalAccessToken } : null;
 }
 
 export async function apiFetch(url, options = {}) {
