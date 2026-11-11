@@ -221,8 +221,9 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
       </section>
       <section className="roster" aria-labelledby="roster-title">
         <div className="section-heading"><div><h2 id="roster-title">Listado Oficial de Estudiantes · Grado 10°A</h2><p>{summary.total} estudiantes en el salón · {summary.ABSENT} fallas hoy</p></div>
-          <button className="primary" type="button" onClick={saveAttendance} disabled={viewState !== 'data' || !sessionDate || isSubmitting}>Guardar asistencia del curso</button>
+          <button className="primary" type="button" onClick={saveAttendance} disabled={viewState !== 'data' || !sessionDate || isSubmitting}>{isSubmitting ? 'Guardando asistencia…' : 'Guardar asistencia del curso'}</button>
         </div>
+        {notice?.message && <p className="notice" data-type={notice.type} role="status" aria-live="polite">{notice.message}</p>}
         {viewState !== 'data' ? <p className="empty">{stateMessage}</p> : (
           <div className="student-list">{students.map((st) => (
             <article className="student-row" key={st.studentId}>
@@ -235,7 +236,6 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
             </article>
           ))}</div>
         )}
-        <p className="notice" data-type={notice?.type} role="status" aria-live="polite">{notice?.message}</p>
       </section>
     </main>
   );
