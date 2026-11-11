@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ATTENDANCE_STATUSES,
   buildAttendanceSessionPayload,
@@ -7,7 +7,7 @@ import {
   getTodayISODate,
   updateStudentStatus
 } from './attendanceSession.js';
-import { apiFetch } from 'shell/apiClient';
+import { apiFetch, extractShellContext, SHELL_ORIGIN } from './apiClient.js';
 import './styles.css';
 import './feedback.css';
 
@@ -61,11 +61,21 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
   const [excuseText, setExcuseText] = useState('');
   const [notice, setNotice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [shellContext, setShellContext] = useState(null);
 
-  const activeRole = useMemo(() => {
-    const r = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('role')?.toUpperCase() : '';
-    return ['DOCENTE', 'ACUDIENTE', 'DIRECTIVO'].includes(r) ? r : 'DOCENTE';
-  }, []);
+  const isStandalone = typeof window !== 'undefined' && window.parent === window;
+  const activeRole = shellContext?.role || 'ACUDIENTE';
+
+  useEffect(() => {
+    if (isStandalone) return undefined;
+    const handleMessage = (event) => {
+      const ctx = extractShellContext(event);
+      if (ctx) setShellContext(ctx);
+    };
+    window.addEventListener('message', handleMessage);
+    window.parent.postMessage({ type: 'edutrack:ready' }, SHELL_ORIGIN);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [isStandalone]);
 
   const summary = useMemo(() => calculateAttendanceSummary(students), [students]);
   const viewState = getAttendanceViewState({ isLoading, error, students });
@@ -85,7 +95,7 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
         return apiFetch('/api/v1/attendance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ studentId: studentUuid, schoolId: '00000000-0000-4000-8000-000000000001', date: sessionDate, status: rec.status, reason: rec.reason || undefined, teacherId: '00000000-0000-4000-8000-000000000999', sequenceNum: seq++ })
+          body: JSON.stringify({ studentId: studentUuid, schoolId: '00000000-0000-4000-8000-000000000001', date: sessionDate, status: rec.status, reason: rec.reason || undefined, teacherId: shellContext?.user?.id || '00000000-0000-4000-8000-000000000999', sequenceNum: seq++ })
         }).then((r) => { if (!r.ok) throw new Error('API Error'); return r; });
       }));
       setNotice({ type: 'success', message: `Asistencia del ${sessionDate} guardada exitosamente (${students.length} estudiantes).` });
@@ -93,6 +103,18 @@ export default function App({ initialStudents = INITIAL_STUDENTS, isLoading = fa
       setNotice({ type: 'error', message: `Planilla del ${sessionDate} respaldada localmente (${summary.PRESENT} presentes, ${summary.ABSENT} fallas).` });
     } finally { setIsSubmitting(false); }
   };
+
+  if (isStandalone) {
+    return (
+      <main className="attendance-page"><header className="page-header"><div><p className="eyebrow">EDUTRACK · ACCESO RESTRINGIDO</p><h1>Acceso Institucional Protegido</h1><p>Este módulo de asistencia opera únicamente dentro de EduTrack Shell.</p><p><a href={SHELL_ORIGIN}>Ingresar desde EduTrack Shell ({SHELL_ORIGIN})</a></p></div></header></main>
+    );
+  }
+
+  if (!shellContext) {
+    return (
+      <main className="attendance-page"><p className="notice" role="status">Sincronizando contexto seguro con EduTrack…</p></main>
+    );
+  }
 
   if (activeRole === 'ACUDIENTE') {
     const submitParentExcuse = (e) => {
